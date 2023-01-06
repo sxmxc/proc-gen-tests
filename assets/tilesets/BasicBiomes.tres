@@ -1,0 +1,81 @@
+[gd_resource type="TileSet" load_steps=9 format=3 uid="uid://cslqpt5dkf280"]
+
+[ext_resource type="Texture2D" uid="uid://xae31asfwg86" path="res://assets/tilesets/Biomes-Snap.png" id="1_tso4a"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_ivkto"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_t4oei"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_0wdlx"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_nyqn1"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_6ud78"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_7u6eb"]
+vertices = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+outlines = [PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_f332g"]
+texture = ExtResource("1_tso4a")
+texture_region_size = Vector2i(18, 18)
+0:0/0 = 0
+0:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+0:0/0/physics_layer_0/angular_velocity = 0.0
+0:0/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_ivkto")
+1:0/0 = 0
+1:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+1:0/0/physics_layer_0/angular_velocity = 0.0
+1:0/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_0wdlx")
+2:0/0 = 0
+2:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+2:0/0/physics_layer_0/angular_velocity = 0.0
+2:0/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_6ud78")
+3:0/0 = 0
+3:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+3:0/0/physics_layer_0/angular_velocity = 0.0
+3:0/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_7u6eb")
+0:1/0 = 0
+0:1/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+0:1/0/physics_layer_0/angular_velocity = 0.0
+0:1/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_t4oei")
+1:1/0 = 0
+1:1/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+1:1/0/physics_layer_0/angular_velocity = 0.0
+1:1/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_nyqn1")
+2:1/0 = 0
+2:1/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+2:1/0/physics_layer_0/angular_velocity = 0.0
+2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+4:0/0 = 0
+4:0/0/physics_layer_0/linear_velocity = Vector2(0, 0)
+4:0/0/physics_layer_0/angular_velocity = 0.0
+
+[resource]
+physics_layer_0/collision_layer = 1
+navigation_layer_0/layers = 1
+custom_data_layer_0/name = "temperature"
+custom_data_layer_0/type = 3
+custom_data_layer_1/name = "moisture"
+custom_data_layer_1/type = 3
+custom_data_layer_2/name = "altitude"
+custom_data_layer_2/type = 3
+custom_data_layer_3/name = "biome"
+custom_data_layer_3/type = 4
+sources/0 = SubResource("TileSetAtlasSource_f332g")

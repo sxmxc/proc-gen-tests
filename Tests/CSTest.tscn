@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://cismhjxf0mwlo"]
+
+[ext_resource type="Script" path="res://Tests/CSTest.cs" id="1_do0b4"]
+
+[node name="CSTest" type="Node2D"]
+script = ExtResource("1_do0b4")
+
+[node name="Label" type="Label" parent="."]
+offset_right = 40.0
+offset_bottom = 23.0

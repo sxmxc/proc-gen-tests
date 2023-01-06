@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://ccspwrjt1axwi"]
+
+[ext_resource type="FastNoiseLite" uid="uid://d24jk2clm4wge" path="res://Tests/testFastNoiseLite.tres" id="1_dygt2"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_phmak"]
+noise = ExtResource("1_dygt2")
+
+[node name="NoiseTest" type="Node2D"]
+
+[node name="TextureRect" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 293.0
+offset_top = 65.0
+offset_right = 805.0
+offset_bottom = 577.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("NoiseTexture2D_phmak")

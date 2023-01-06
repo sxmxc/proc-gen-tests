@@ -1,0 +1,17 @@
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\sharp-guide.deps.json
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\sharp-guide.runtimeconfig.json
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\sharp-guide.dll
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\sharp-guide.pdb
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\GodotSharp.dll
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\bin\Debug\GodotSharpEditor.dll
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.csproj.AssemblyReference.cache
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.AssemblyInfoInputs.cache
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.AssemblyInfo.cs
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.csproj.CoreCompileInputs.cache
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.csproj.CopyComplete
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.dll
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\refint\sharp-guide.dll
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.pdb
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\sharp-guide.genruntimeconfig.cache
+D:\Projects\Godot\sharp-guide\.godot\mono\temp\obj\Debug\ref\sharp-guide.dll

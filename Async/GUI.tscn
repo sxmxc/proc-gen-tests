@@ -1,0 +1,172 @@
+[gd_scene load_steps=10 format=3 uid="uid://ct6163cdevvdl"]
+
+[ext_resource type="Texture2D" uid="uid://cfv0yaumc3ag0" path="res://world/assets/tilesets/BasicBiomes.png" id="1_3xrqe"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i3kh5"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dmg02"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5dxo1"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(32, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_djh5b"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(48, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vmqvr"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(48, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g454f"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(0, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_265ea"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(16, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g7t8i"]
+atlas = ExtResource("1_3xrqe")
+region = Rect2(32, 16, 16, 16)
+
+[node name="GUI" type="CanvasLayer"]
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -162.0
+offset_top = -243.0
+grow_horizontal = 0
+grow_vertical = 0
+metadata/_edit_group_ = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 46.0
+offset_right = -45.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_i3kh5")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer"]
+size_flags_horizontal = 3
+text = "Grassland
+"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer2"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer2/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_dmg02")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer2"]
+size_flags_horizontal = 3
+text = "Beach
+"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer3"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer3/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_5dxo1")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer3"]
+size_flags_horizontal = 3
+text = "Ocean
+"
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer4"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer4/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_djh5b")
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer4"]
+size_flags_horizontal = 3
+text = "Plains
+"
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer5"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer5/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_vmqvr")
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer5"]
+size_flags_horizontal = 3
+text = "Snow
+"
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer6"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer6/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_g454f")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer6"]
+size_flags_horizontal = 3
+text = "Dessert
+"
+
+[node name="HBoxContainer7" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer7"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer7/CenterContainer"]
+custom_minimum_size = Vector2(16, 16)
+texture = SubResource("AtlasTexture_265ea")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer7"]
+size_flags_horizontal = 3
+text = "Jungle"
+
+[node name="HBoxContainer8" type="HBoxContainer" parent="Panel/VBoxContainer"]
+
+[node name="CenterContainer" type="CenterContainer" parent="Panel/VBoxContainer/HBoxContainer8"]
+
+[node name="TextureRect" type="TextureRect" parent="Panel/VBoxContainer/HBoxContainer8/CenterContainer"]
+texture = SubResource("AtlasTexture_g7t8i")
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer8"]
+size_flags_horizontal = 3
+text = "Swamp"
