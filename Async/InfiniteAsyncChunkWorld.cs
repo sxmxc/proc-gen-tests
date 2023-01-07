@@ -36,14 +36,6 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 		get;
 		set;
 	}
-	public int NumberChunksX 
-	{ 
-		get {return WorldSize.x / ChunkSize.x;} 
-	}
-    public int NumberChunksY
-    {
-        get { return WorldSize.y / ChunkSize.y; }
-    }
 
 	public int TotalTiles
 	{
@@ -52,7 +44,7 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 
 	public int TotalChunks
 	{
-		get { return NumberChunksX * NumberChunksY; }
+		get { return _chunks.Count; }
 	}
 
 	public int ChunksLoaded
@@ -67,7 +59,6 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 		set;
 	}
 
-	private ulong _time_start;
 	private string _currentStage = "Begin";
 
 	private ConcurrentBag<Task<Chunk>> _spawnedTasks = new ConcurrentBag<Task<Chunk>>();
@@ -76,6 +67,10 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 
 	private CharacterBody2D _player;
 
+
+	private FastNoiseLite _altNoise;
+	private FastNoiseLite _tempNoise;
+	private FastNoiseLite _moistNoise;
     private Label _dataBenchMarkLabel;
     private Label _tileBenchMarkLabel;
 	private TextureRect _tempNoiseTextureRect;
@@ -105,6 +100,7 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 
 	private ConcurrentDictionary<Vector2i, Chunk> _chunks = new ConcurrentDictionary<Vector2i, Chunk>();
 
+
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -123,10 +119,20 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 		_loadScreen = GetNode<CanvasLayer>("LoadCanvas");
 
         _generatingTotalProgress.Value = 0;
-		ShowLoadingScreen();
+		// ShowLoadingScreen();
         TemperatureSeed = (int)Randi();
         MoistureSeed = (int)Randi();
         AltitudeSeed = (int)Randi();
+        
+		_altNoise = new FastNoiseLite();
+        _altNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
+        _altNoise.Seed = AltitudeSeed;
+        _moistNoise = new FastNoiseLite();
+        _moistNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
+        _moistNoise.Seed = MoistureSeed;
+        _tempNoise = new FastNoiseLite();
+        _tempNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
+        _tempNoise.Seed = TemperatureSeed;
 		
 		Print("Trying to start task..");
 		UpdateVisibleChunks();
@@ -137,10 +143,7 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 	{
 		if (_isLoading) 
 		{
-			_generatingTotalLabel.Text = string.Format("Tiles ({0}/{1})", TilesLoaded.ToString(), TotalTiles.ToString());
-			_stageLabel.Text = _currentStage;
-			var progress = ((float)TilesLoaded / (float)TotalTiles) * 100;
-			_generatingTotalProgress.Value = progress;
+			return;
 		}
 		else
 		{
@@ -150,30 +153,12 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 
     public override void _Input(InputEvent @event)
     {
-		if (!_isLoading)
-		{
-			if (@event is InputEventKey eventKey)
-			{
-				if (eventKey.Pressed && eventKey.Keycode == Key.Space)
-				{
-					ShowLoadingScreen();
-                    TemperatureSeed = (int)Randi();
-                    MoistureSeed = (int)Randi();
-                    AltitudeSeed = (int)Randi();
-					var toDelete = _chunks;
-					_chunks.Clear();
-                    foreach (var key in toDelete.Keys)
-                    {
-                        toDelete[key].QueueFree();
-                    }
-                    Task.Run(async () => { await Generate(); });
-				}
-			}
-		}
+
     }
 
 	public override void _ExitTree()
 	{
+		//cleanup of orphaned chunks not in tree
         foreach (var key in _chunks.Keys)
         {
             _chunks[key].QueueFree();
@@ -193,36 +178,22 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 
 	}
 
-	private async Task GenerateChunks(List<Vector2i> chunksToLoad)
+	private async Task GenerateChunk(Vector2i chunkCoords)
 	{
-		Chunk chunk;
+		ConcurrentBag<Task<Chunk>> spawnedTasks = new ConcurrentBag<Task<Chunk>>();
         var timeStart = Time.GetTicksMsec();
 
-        var altNoise = new FastNoiseLite();
-        altNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        altNoise.Seed = AltitudeSeed;
+		spawnedTasks.Add(CreateChunkAsync(chunkCoords));
+		
 
-        var moistNoise = new FastNoiseLite();
-        moistNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        moistNoise.Seed = MoistureSeed;
-
-        var tempNoise = new FastNoiseLite();
-        tempNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        tempNoise.Seed = TemperatureSeed;
-
-		foreach (var x in chunksToLoad)
-		{
-            _spawnedTasks.Add(CreateChunkAsync(x, altNoise, tempNoise, moistNoise));
-		}
-
-        while (_spawnedTasks.Count > 0)
+        while (spawnedTasks.Count > 0)
         {
             try
             {
-                Task<Chunk> chunkTask = await Task.WhenAny(_spawnedTasks);
-                _spawnedTasks.TryTake(out chunkTask);
+                Task<Chunk> chunkTask = await Task.WhenAny(spawnedTasks);
+                spawnedTasks.TryTake(out chunkTask);
 
-                chunk = await chunkTask;
+                Chunk chunk = await chunkTask;
                 _chunks[chunk.ChunkCoords] = chunk;
             }
             catch (Exception exc)
@@ -230,74 +201,10 @@ public partial class InfiniteAsyncChunkWorld : Node2D
                 PrintErr(exc);
             }
         }
-
-
+        Print(string.Format("Chunk Generated"));
 
 	}
-	private async Task Generate()
-	{
-        Print("Generate task started..");
-		_time_start = Time.GetTicksMsec();
-		TilesLoaded = 0;
-		_isLoading = true;
-
-		_currentStage = "Generating chunks of tiles...";
-        var altNoise = new FastNoiseLite();
-        altNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        altNoise.Seed = AltitudeSeed;
-        var altNoiseTexture = new NoiseTexture2D();
-        altNoiseTexture.Noise = altNoise;
-        _altNoiseTextureRect.CallDeferred("set_texture", altNoiseTexture);
-
-        var moistNoise = new FastNoiseLite();
-        moistNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        moistNoise.Seed = MoistureSeed;
-        var moistNoiseTexture = new NoiseTexture2D();
-        moistNoiseTexture.Noise = moistNoise;
-        _moistNoiseTextureRect.CallDeferred("set_texture", moistNoiseTexture);
-
-        var tempNoise = new FastNoiseLite();
-        tempNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
-        tempNoise.Seed = TemperatureSeed;
-        var tempNoiseTexture = new NoiseTexture2D();
-        tempNoiseTexture.Noise = tempNoise;
-        _tempNoiseTextureRect.CallDeferred("set_texture", tempNoiseTexture);
-
-		var tally = 0;
-		foreach (var x in Range(NumberChunksX))
-		{
-			foreach (var y in Range(NumberChunksY))
-			{
-				var temp = new Chunk();
-				temp.ChunkCoords = new Vector2i(x,y);
-				temp.ID = tally;
-				temp.Name = string.Format("Chunk({0}/{1})", x.ToString(), y.ToString());
-				temp.TileSet = WorldTileset;
-				temp.Position = new Vector2(WorldTileset.TileSize.x * ChunkSize.x * x, WorldTileset.TileSize.y * ChunkSize.y * y);
-                _spawnedTasks.Add(SetTilesAsync(temp, temp.ChunkCoords, altNoise, tempNoise, moistNoise));
-				tally += 1; 
-			}
-		}
-		while(_spawnedTasks.Count > 0 )
-		{
-            try
-            {
-				Task<Chunk> chunkTask = await Task.WhenAny(_spawnedTasks);
-				_spawnedTasks.TryTake(out chunkTask);
-
-				Chunk chunk = await chunkTask;
-				_chunks[chunk.ChunkCoords] = chunk;
-            }
-            catch (Exception exc)
-            {
-                PrintErr(exc);
-            }
-		}
-		ulong tileTimeEnd = Time.GetTicksMsec();
-        _tileBenchMarkLabel.Text = string.Format("Tile generation time: {0}ms", tileTimeEnd - _time_start);
-        EmitSignal(nameof(MapGenerationDone));
-	}
-
+	
 	private float GetTemperatureNoise(Vector2 worldPosition, FastNoiseLite noise)
 	{
 		return 2f * Mathf.Abs(noise.GetNoise2d(worldPosition.x, worldPosition.y));
@@ -313,18 +220,18 @@ public partial class InfiniteAsyncChunkWorld : Node2D
         return 2f * Mathf.Abs(noise.GetNoise2d(worldPosition.x, worldPosition.y));
     }
 
-	private async Task<Chunk> CreateChunkAsync(Vector2i chunkCoords, FastNoiseLite altNoise, FastNoiseLite tempNoise, FastNoiseLite moistNoise)
+	private async Task<Chunk> CreateChunkAsync(Vector2i chunkCoords)
 	{
-        Print(string.Format("Generating Chunk ({0}/{1})", chunkCoords.x, chunkCoords.y));
-		Chunk chunk = await Task<Chunk>.Run(() => {return CreateChunk(chunkCoords, altNoise, tempNoise, moistNoise);});
+		Chunk chunk = await Task<Chunk>.Run(() => {return CreateChunk(chunkCoords);});
 		return chunk;
 	}
-	private Chunk CreateChunk(Vector2i chunkCoords, FastNoiseLite altNoise, FastNoiseLite tempNoise, FastNoiseLite moistNoise) 
+	private Chunk CreateChunk(Vector2i chunkCoords) 
 	{
+        Print(string.Format("Creating Chunk ({0},{1})", chunkCoords.x, chunkCoords.y));
 		var chunk = new Chunk();
 		chunk.ChunkCoords = chunkCoords;
         chunk.ID = _chunks.Count + 1;
-        chunk.Name = string.Format("Chunk({0}/{1})", chunkCoords.ToString(), chunkCoords.ToString());
+        chunk.Name = string.Format("Chunk({0},{1})", chunkCoords.x.ToString(), chunkCoords.y.ToString());
         chunk.TileSet = WorldTileset;
         chunk.Position = new Vector2(WorldTileset.TileSize.x * ChunkSize.x * chunkCoords.x, WorldTileset.TileSize.y * ChunkSize.y * chunkCoords.y);
 
@@ -335,9 +242,9 @@ public partial class InfiniteAsyncChunkWorld : Node2D
             {
                 var worldPos = new Vector2(x + (ChunkSize.x * chunkCoords.x), y + (ChunkSize.y * chunkCoords.y));
                 var pos = new Vector2i(x, y);
-                var alt = GetAltitudeNoise(worldPos, altNoise);
-                var temp = GetTemperatureNoise(worldPos, tempNoise);
-                var moist = GetMoistureNoise(worldPos, moistNoise);
+                var alt = GetAltitudeNoise(worldPos, _altNoise);
+                var temp = GetTemperatureNoise(worldPos, _tempNoise);
+                var moist = GetMoistureNoise(worldPos, _moistNoise);
 
                 if (alt < 0.2f)
                 {
@@ -378,75 +285,17 @@ public partial class InfiniteAsyncChunkWorld : Node2D
             }
             ChunksLoaded += 1;
         }
+        Print(string.Format("Chunk ({0},{1} done)", chunkCoords.x, chunkCoords.y));
+		_mapChunkContainer.AddChild(chunk);
         return chunk;
     }
 
-    private async Task<Chunk> SetTilesAsync(Chunk chunkTileMap, Vector2i chunkCoords, FastNoiseLite altNoise, FastNoiseLite tempNoise, FastNoiseLite moistNoise)
-    {
-        Chunk chunk = await Task<Chunk>.Run(() => { return SetTiles(chunkTileMap, chunkCoords, altNoise, tempNoise, moistNoise); });
-        return chunk;
-    }
-
-	private Chunk SetTiles(Chunk chunkTileMap, Vector2i chunkCoords, FastNoiseLite altNoise, FastNoiseLite tempNoise, FastNoiseLite moistNoise)
-	{	
-		foreach (var x in Range(ChunkSize.x))
-		{
-			foreach (var y in Range(ChunkSize.y))
-			{
-				var worldPos = new Vector2(x + (ChunkSize.x * chunkCoords.x), y + (ChunkSize.y * chunkCoords.y));
-				var pos = new Vector2i(x,y);
-				var alt = GetAltitudeNoise(worldPos, altNoise);
-				var temp = GetTemperatureNoise(worldPos, tempNoise);
-				var moist = GetMoistureNoise(worldPos, moistNoise);
-
-				if (alt < 0.2f)
-				{
-					chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Water"]);
-				}
-				else if (Between(alt, 0.2f, .25f))
-				{
-                    chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Sand"]);
-				}
-				else if (Between(alt, 0.25f, .8f))
-				{
-					if (Between(moist, 0, 0.4f) && Between(temp, .2f, .6f))
-					{
-                        chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Plains"]);
-					}
-					else if (Between(moist, 0.4f, 0.9f) && temp > .6f)
-					{
-                        chunkTileMap.SetCell(0, pos, 0, _tileDictionary["JungleGrass"]);
-					}
-					else if (Between(moist, 0.4f, 0.9f) && temp < .6f)
-					{
-                        chunkTileMap.SetCell(0, pos, 0, _tileDictionary["SwampGrass"]);
-					}
-					else if (temp > .7f && moist < .4f)
-					{
-                        chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Dirt"]);
-					}
-					else
-					{
-                        chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Grass"]);
-					}
-				}
-				else 
-				{
-                    chunkTileMap.SetCell(0, pos, 0, _tileDictionary["Snow"]);
-				}
-                TilesLoaded += 1;
-			}
-			ChunksLoaded += 1;
-		}
-		return chunkTileMap;
-	}
-
-	private void UpdateVisibleChunks()
+	private List<Vector2i> GetVisibleChunks()
 	{
-		var playerChunkPos =  (Vector2i)_player.Position / (ChunkSize * WorldTileset.TileSize);
-		var chunksToLoad = new List<Vector2i>();
-		chunksToLoad.Add(playerChunkPos);
-		chunksToLoad.Add(playerChunkPos + Vector2i.Right);
+        var playerChunkPos = (Vector2i)_player.Position / (ChunkSize * WorldTileset.TileSize);
+        var chunksToLoad = new List<Vector2i>();
+        chunksToLoad.Add(playerChunkPos);
+        chunksToLoad.Add(playerChunkPos + Vector2i.Right);
         chunksToLoad.Add(playerChunkPos + Vector2i.Left);
         chunksToLoad.Add(playerChunkPos + Vector2i.Up);
         chunksToLoad.Add(playerChunkPos + Vector2i.Down);
@@ -455,20 +304,51 @@ public partial class InfiniteAsyncChunkWorld : Node2D
         chunksToLoad.Add(playerChunkPos + new Vector2i(1, -1));
         chunksToLoad.Add(playerChunkPos + new Vector2i(-1, -1));
 
-        Task.Run(async () => { await GenerateChunks(chunksToLoad); });
+		return chunksToLoad;
+	}
+
+	private async void UpdateVisibleChunks()
+	{
+		_isLoading = true;
+		var chunksToLoad = GetVisibleChunks();
+
+		foreach (var coord in chunksToLoad)
+		{
+			if (!_chunks.ContainsKey(coord))
+			{
+                await GenerateChunk(coord);
+                _chunks[coord].Visible = true;
+                Print(string.Format("Chunks generated, marking visible"));
+            }
+			else 
+			{
+
+				if (!_mapChunkContainer.GetChildren().Contains(_chunks[coord]))
+				{
+                    _mapChunkContainer.AddChild(_chunks[coord]);
+				}
+                _chunks[coord].Visible = true;
+                //Print(string.Format("Chunks exists, marking visible"));
+            }
+                      
+		}
+        
 
 		foreach (var coords in _chunks.Keys)
 		{
-			if (!chunksToLoad.Contains(coords))
+            if (!chunksToLoad.Contains(coords))
 			{
+                
 				_chunks[coords].Visible = false;
-				_chunks[coords].GetParent().RemoveChild(_chunks[coords]);
-			}
-			else
-			{
-				_mapChunkContainer.AddChild(_chunks[coords]);
+				if (_mapChunkContainer.GetChildren().Contains(_chunks[coords]))
+				{
+                    _mapChunkContainer.RemoveChild(_chunks[coords]);
+                    Print(string.Format("Removing Chunk"));
+				}
+				
 			}
 		}
+		_isLoading = false;
 	}	
 
 	private void ShowLoadingScreen()

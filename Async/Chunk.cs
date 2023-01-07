@@ -24,9 +24,4 @@ public partial class Chunk : TileMap
 	public override void _Process(double delta)
 	{
 	}
-
-	public TaskAwaiter GetAwaiter()
-	{
-		return new TaskAwaiter();
-	}
 }
