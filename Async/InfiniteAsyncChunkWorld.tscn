@@ -4,9 +4,12 @@
 [ext_resource type="PackedScene" uid="uid://cb2wcdmwyqjuy" path="res://CharacterPlayer/CharacterPlayer.tscn" id="2_72jir"]
 
 [node name="InfiniteAsyncChunkWorld" type="Node2D"]
+position = Vector2(0, -1)
 script = ExtResource("1_cdbm7")
 
-[node name="MapChunkContainer" type="Node2D" parent="."]
+[node name="MapChunkContainer" type="TileMap" parent="."]
+cell_quadrant_size = 64
+format = 2
 
 [node name="LoadCanvas" type="CanvasLayer" parent="."]
 visible = false
@@ -88,9 +91,9 @@ offset_bottom = 76.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="DebugCanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="Control" type="Control" parent="CanvasLayer"]
+[node name="Control" type="Control" parent="DebugCanvasLayer"]
 layout_mode = 3
 anchors_preset = 11
 anchor_left = 1.0
@@ -99,7 +102,7 @@ anchor_bottom = 1.0
 grow_horizontal = 0
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control"]
+[node name="VBoxContainer" type="VBoxContainer" parent="DebugCanvasLayer/Control"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -110,50 +113,28 @@ offset_right = -18.0
 grow_horizontal = 0
 grow_vertical = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
-layout_mode = 2
-text = "Temp Noise"
-
-[node name="TempNoiseRect" type="TextureRect" parent="CanvasLayer/Control/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 128)
-layout_mode = 2
-ignore_texture_size = true
-
-[node name="Label2" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
-layout_mode = 2
-text = "Alt Noise"
-
-[node name="AltitudeNoiseRect" type="TextureRect" parent="CanvasLayer/Control/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 128)
-layout_mode = 2
-ignore_texture_size = true
-
-[node name="Label3" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
-layout_mode = 2
-text = "Moist Noise"
-
-[node name="MoistureNoiseRect" type="TextureRect" parent="CanvasLayer/Control/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 128)
-layout_mode = 2
-ignore_texture_size = true
-
-[node name="DataBenchmarkLabel" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
+[node name="DataBenchmarkLabel" type="Label" parent="DebugCanvasLayer/Control/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "Data generation time: 0ms"
 
-[node name="TileBenchmarkLabel" type="Label" parent="CanvasLayer/Control/VBoxContainer"]
+[node name="TileBenchmarkLabel" type="Label" parent="DebugCanvasLayer/Control/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Tile generation time: 0ms"
+
+[node name="PlayerChunkLabel" type="Label" parent="DebugCanvasLayer/Control/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player in chunk: (0,0)"
 
 [node name="CharacterPlayer" parent="." instance=ExtResource("2_72jir")]
 z_index = 2
 
 [node name="Camera2D" type="Camera2D" parent="CharacterPlayer"]
-current = true
 zoom = Vector2(2, 2)
+
+[node name="Camera2DFar" type="Camera2D" parent="CharacterPlayer"]
+current = true
+zoom = Vector2(0.5, 0.5)

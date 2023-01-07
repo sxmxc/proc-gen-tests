@@ -1,10 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://ccwrt4ju8wetx"]
+[gd_scene load_steps=3 format=3 uid="uid://cm2wyo740ibo7"]
 
-[ext_resource type="Script" path="res://Async/AsyncChunkWorld.cs" id="1_18rd2"]
+[ext_resource type="Script" path="res://Async/Old/AsyncChunkWorld.cs" id="1_cvmrp"]
 [ext_resource type="PackedScene" uid="uid://cb2wcdmwyqjuy" path="res://CharacterPlayer/CharacterPlayer.tscn" id="2_4jn0b"]
 
 [node name="AsyncChunkWorld" type="Node2D"]
-script = ExtResource("1_18rd2")
+script = ExtResource("1_cvmrp")
 
 [node name="MapChunkContainer" type="Node2D" parent="."]
 

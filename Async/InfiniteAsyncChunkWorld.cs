@@ -7,15 +7,11 @@ using System.Collections.Concurrent;
 
 public partial class InfiniteAsyncChunkWorld : Node2D
 {
-	[Signal]
-	public delegate void MapGenerationDoneEventHandler();
 	public const string ModuleName = "WorldGenerator";
 	
 	[Export]
 	public TileSet WorldTileset = ResourceLoader.Load<TileSet>("res://assets/tilesets/BasicBiomes.tres");
 
-    [Export]
-	public Vector2i WorldSize = new Vector2i(4096, 4096);
     [Export]
     public Vector2i ChunkSize = new Vector2i(64, 64);
 	[Export]
@@ -37,89 +33,37 @@ public partial class InfiniteAsyncChunkWorld : Node2D
 		set;
 	}
 
-	public int TotalTiles
+	public Vector2i ChunkHalfSize
 	{
-		get { return WorldSize.x * WorldSize.y; }
+		get { return ChunkSize / 2; }
 	}
-
-	public int TotalChunks
-	{
-		get { return _chunks.Count; }
-	}
-
-	public int ChunksLoaded
-	{
-		get;
-		set;
-	}
-
-	public int TilesLoaded
-	{
-		get;
-		set;
-	}
-
-	private string _currentStage = "Begin";
-
-	private ConcurrentBag<Task<Chunk>> _spawnedTasks = new ConcurrentBag<Task<Chunk>>();
-
-	private bool _isLoading = false;
 
 	private CharacterBody2D _player;
+
+	private Vector2i _playerCurrentChunk = Vector2i.Zero;
 
 
 	private FastNoiseLite _altNoise;
 	private FastNoiseLite _tempNoise;
 	private FastNoiseLite _moistNoise;
-    private Label _dataBenchMarkLabel;
+	private Label _playerChunkLabel;
     private Label _tileBenchMarkLabel;
-	private TextureRect _tempNoiseTextureRect;
-    private TextureRect _moistNoiseTextureRect;
-    private TextureRect _altNoiseTextureRect;
 	private Node2D _mapChunkContainer;
-	private Label _generatingTotalLabel;
-	private ProgressBar _generatingTotalProgress;
-	private Label _stageLabel;
 	private CanvasLayer _loadScreen;
-	private IDictionary<string , Vector2i> _tileDictionary = new ConcurrentDictionary<string ,Vector2i>(
-		new Dictionary<string, Vector2i>
-		{
-        	{ "Grass", new Vector2i(0,1) },
-    		{ "Sand", new Vector2i(1,1) },
-    		{ "Water", new Vector2i(2,1) },
-    		{ "Plains", new Vector2i(3,0) },
-    		{ "Dirt", new Vector2i(4,0) },
-    		{ "JungleGrass", new Vector2i(0,0) },
-    		{ "SwampGrass", new Vector2i(2,0) },
-    		{ "Snow", new Vector2i(1,0) }
-		});
 
-	private ConcurrentDictionary<Vector2, float> _temperature = new ConcurrentDictionary<Vector2, float>();
-    private ConcurrentDictionary<Vector2, float> _moisture = new ConcurrentDictionary<Vector2, float>();
-    private ConcurrentDictionary<Vector2, float> _altitude = new ConcurrentDictionary<Vector2, float>();
-
-	private ConcurrentDictionary<Vector2i, Chunk> _chunks = new ConcurrentDictionary<Vector2i, Chunk>();
+	private ConcurrentDictionary<Vector2i, AsyncChunk> _chunks = new ConcurrentDictionary<Vector2i, AsyncChunk>();
 
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-        Print("Beginning of ready.");
-        MapGenerationDone += OnMapGenerationDone;
         Randomize();
 		_player = GetNode<CharacterBody2D>("CharacterPlayer");
+		_playerChunkLabel = GetNode<Label>("%PlayerChunkLabel");
 		_tileBenchMarkLabel = GetNode<Label>("%TileBenchmarkLabel");
-        _tempNoiseTextureRect = GetNode<TextureRect>("%TempNoiseRect");
-        _altNoiseTextureRect = GetNode<TextureRect>("%AltitudeNoiseRect");
-        _moistNoiseTextureRect = GetNode<TextureRect>("%MoistureNoiseRect");
 		_mapChunkContainer = GetNode<Node2D>("MapChunkContainer");
-		_generatingTotalLabel = GetNode<Label>("%GeneratingTotalLabel");
-		_generatingTotalProgress = GetNode<ProgressBar>("%GeneratingTotalProgress");
-		_stageLabel = GetNode<Label>("%StageLabel");
 		_loadScreen = GetNode<CanvasLayer>("LoadCanvas");
 
-        _generatingTotalProgress.Value = 0;
-		// ShowLoadingScreen();
         TemperatureSeed = (int)Randi();
         MoistureSeed = (int)Randi();
         AltitudeSeed = (int)Randi();
@@ -133,251 +77,92 @@ public partial class InfiniteAsyncChunkWorld : Node2D
         _tempNoise = new FastNoiseLite();
         _tempNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Value;
         _tempNoise.Seed = TemperatureSeed;
+
+		//load center chunk
+		GenerateChunksAroudPosition(Vector2i.Zero);
 		
-		Print("Trying to start task..");
-		UpdateVisibleChunks();
 	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
+	public Vector2i GetChunkPosition(Vector2 pos)
+	{
+        var chunkX = Mathf.FloorToInt(pos.x / (ChunkSize.x * WorldTileset.TileSize.x));
+        var chunkY = Mathf.FloorToInt(pos.y / (ChunkSize.y * WorldTileset.TileSize.y));
+
+		return new Vector2i(chunkX, chunkY);
+
+	}
+
 	public override void _Process(double delta)
 	{
-		if (_isLoading) 
-		{
-			return;
-		}
-		else
-		{
-			UpdateVisibleChunks();
-		}
-	}
-
-    public override void _Input(InputEvent @event)
-    {
-
-    }
-
-	public override void _ExitTree()
-	{
-		//cleanup of orphaned chunks not in tree
-        foreach (var key in _chunks.Keys)
-        {
-            _chunks[key].QueueFree();
-        }
-	}
-
-	private void OnMapGenerationDone()
-	{
-		_isLoading = false;
-		_currentStage = "Done";
-		_mapChunkContainer.AddChild(_chunks[Vector2i.Zero]);
-		_chunks[Vector2i.Zero].Visible = true;
-		// _temperature.Clear();
-		// _altitude.Clear();
-		// _moisture.Clear();
-		HideLoadingScreen();
-
-	}
-
-	private async Task GenerateChunk(Vector2i chunkCoords)
-	{
-		ConcurrentBag<Task<Chunk>> spawnedTasks = new ConcurrentBag<Task<Chunk>>();
-        var timeStart = Time.GetTicksMsec();
-
-		spawnedTasks.Add(CreateChunkAsync(chunkCoords));
 		
+        // Get the current chunk position of the player
+        var playerChunk = GetChunkPosition(_player.Position);
+        if(playerChunk != _playerCurrentChunk)
+		{
+			Print(string.Format("Loading chunks around ({0},{1})", playerChunk.x, playerChunk.y));
 
-        while (spawnedTasks.Count > 0)
-        {
-            try
-            {
-                Task<Chunk> chunkTask = await Task.WhenAny(spawnedTasks);
-                spawnedTasks.TryTake(out chunkTask);
-
-                Chunk chunk = await chunkTask;
-                _chunks[chunk.ChunkCoords] = chunk;
-            }
-            catch (Exception exc)
-            {
-                PrintErr(exc);
-            }
-        }
-        Print(string.Format("Chunk Generated"));
+			GenerateChunksAroudPosition(playerChunk);
+            // Load the surrounding chunks if necessary
+		}
+        _playerCurrentChunk = playerChunk;
+        _playerChunkLabel.Text = string.Format("Player in chunk: ({0},{1})", playerChunk.x, playerChunk.y);
 
 	}
 	
-	private float GetTemperatureNoise(Vector2 worldPosition, FastNoiseLite noise)
+	public async void LoadChunk(int x, int y)
 	{
-		return 2f * Mathf.Abs(noise.GetNoise2d(worldPosition.x, worldPosition.y));
-	}
+		var chunkCoords = new Vector2i(x, y);
+		//check if already loaded
+        if (_chunks.ContainsKey(chunkCoords)) return;
 
-    private float GetAltitudeNoise(Vector2 worldPosition, FastNoiseLite noise)
-    {
-        return 2f * Mathf.Abs(noise.GetNoise2d(worldPosition.x, worldPosition.y));
-    }
-
-    private float GetMoistureNoise(Vector2 worldPosition, FastNoiseLite noise)
-    {
-        return 2f * Mathf.Abs(noise.GetNoise2d(worldPosition.x, worldPosition.y));
-    }
-
-	private async Task<Chunk> CreateChunkAsync(Vector2i chunkCoords)
-	{
-		Chunk chunk = await Task<Chunk>.Run(() => {return CreateChunk(chunkCoords);});
-		return chunk;
-	}
-	private Chunk CreateChunk(Vector2i chunkCoords) 
-	{
-        Print(string.Format("Creating Chunk ({0},{1})", chunkCoords.x, chunkCoords.y));
-		var chunk = new Chunk();
-		chunk.ChunkCoords = chunkCoords;
-        chunk.ID = _chunks.Count + 1;
-        chunk.Name = string.Format("Chunk({0},{1})", chunkCoords.x.ToString(), chunkCoords.y.ToString());
-        chunk.TileSet = WorldTileset;
-        chunk.Position = new Vector2(WorldTileset.TileSize.x * ChunkSize.x * chunkCoords.x, WorldTileset.TileSize.y * ChunkSize.y * chunkCoords.y);
-
-		//generate the tiles
-        foreach (var x in Range(ChunkSize.x))
-        {
-            foreach (var y in Range(ChunkSize.y))
-            {
-                var worldPos = new Vector2(x + (ChunkSize.x * chunkCoords.x), y + (ChunkSize.y * chunkCoords.y));
-                var pos = new Vector2i(x, y);
-                var alt = GetAltitudeNoise(worldPos, _altNoise);
-                var temp = GetTemperatureNoise(worldPos, _tempNoise);
-                var moist = GetMoistureNoise(worldPos, _moistNoise);
-
-                if (alt < 0.2f)
-                {
-                    chunk.SetCell(0, pos, 0, _tileDictionary["Water"]);
-                }
-                else if (Between(alt, 0.2f, .25f))
-                {
-                    chunk.SetCell(0, pos, 0, _tileDictionary["Sand"]);
-                }
-                else if (Between(alt, 0.25f, .8f))
-                {
-                    if (Between(moist, 0, 0.4f) && Between(temp, .2f, .6f))
-                    {
-                        chunk.SetCell(0, pos, 0, _tileDictionary["Plains"]);
-                    }
-                    else if (Between(moist, 0.4f, 0.9f) && temp > .6f)
-                    {
-                        chunk.SetCell(0, pos, 0, _tileDictionary["JungleGrass"]);
-                    }
-                    else if (Between(moist, 0.4f, 0.9f) && temp < .6f)
-                    {
-                        chunk.SetCell(0, pos, 0, _tileDictionary["SwampGrass"]);
-                    }
-                    else if (temp > .7f && moist < .4f)
-                    {
-                        chunk.SetCell(0, pos, 0, _tileDictionary["Dirt"]);
-                    }
-                    else
-                    {
-                        chunk.SetCell(0, pos, 0, _tileDictionary["Grass"]);
-                    }
-                }
-                else
-                {
-                    chunk.SetCell(0, pos, 0, _tileDictionary["Snow"]);
-                }
-                TilesLoaded += 1;
-            }
-            ChunksLoaded += 1;
-        }
-        Print(string.Format("Chunk ({0},{1} done)", chunkCoords.x, chunkCoords.y));
+		//create new chunk
+		var chunk = new AsyncChunk(x,y);
+		chunk.TileSet = WorldTileset;
+		chunk.Name = string.Format("Chunk ({0},{1})", x, y);
 		_mapChunkContainer.AddChild(chunk);
-        return chunk;
-    }
+        //set position of chunk
+        chunk.Position = new Vector2(chunkCoords.x * (ChunkSize.x * WorldTileset.TileSize.x), chunkCoords.y * (ChunkSize.y * WorldTileset.TileSize.y));
+		//generate tiles for the chunk
+		await chunk.GenerateAsync(x * ChunkSize.x, y * ChunkSize.y, _tempNoise, _altNoise, _moistNoise);
+		//store chunk in chunk dictionary
+		_chunks[chunkCoords] = chunk;
 
-	private List<Vector2i> GetVisibleChunks()
-	{
-        var playerChunkPos = (Vector2i)_player.Position / (ChunkSize * WorldTileset.TileSize);
-        var chunksToLoad = new List<Vector2i>();
-        chunksToLoad.Add(playerChunkPos);
-        chunksToLoad.Add(playerChunkPos + Vector2i.Right);
-        chunksToLoad.Add(playerChunkPos + Vector2i.Left);
-        chunksToLoad.Add(playerChunkPos + Vector2i.Up);
-        chunksToLoad.Add(playerChunkPos + Vector2i.Down);
-        chunksToLoad.Add(playerChunkPos + new Vector2i(1, 1));
-        chunksToLoad.Add(playerChunkPos + new Vector2i(-1, 1));
-        chunksToLoad.Add(playerChunkPos + new Vector2i(1, -1));
-        chunksToLoad.Add(playerChunkPos + new Vector2i(-1, -1));
-
-		return chunksToLoad;
 	}
 
-	private async void UpdateVisibleChunks()
+	private void GenerateChunksAroudPosition(Vector2i playerChunk)
 	{
-		_isLoading = true;
-		var chunksToLoad = GetVisibleChunks();
+		List<Vector2i> chunksToLoad = new List<Vector2i>();
+		chunksToLoad.Add(new Vector2i(playerChunk.x - 1, playerChunk.y - 1));
+		chunksToLoad.Add(new Vector2i(playerChunk.x - 1, playerChunk.y));
+        chunksToLoad.Add(new Vector2i(playerChunk.x - 1, playerChunk.y + 1));
+        chunksToLoad.Add(new Vector2i(playerChunk.x, playerChunk.y - 1));
+        chunksToLoad.Add(new Vector2i(playerChunk.x, playerChunk.y));
+        chunksToLoad.Add(new Vector2i(playerChunk.x, playerChunk.y + 1));
+        chunksToLoad.Add(new Vector2i(playerChunk.x + 1, playerChunk.y - 1));
+        chunksToLoad.Add(new Vector2i(playerChunk.x + 1, playerChunk.y));
+        chunksToLoad.Add(new Vector2i(playerChunk.x + 1, playerChunk.y + 1));
 
-		foreach (var coord in chunksToLoad)
+		foreach (Vector2i coord in chunksToLoad)
 		{
-			if (!_chunks.ContainsKey(coord))
-			{
-                await GenerateChunk(coord);
-                _chunks[coord].Visible = true;
-                Print(string.Format("Chunks generated, marking visible"));
-            }
-			else 
-			{
-
-				if (!_mapChunkContainer.GetChildren().Contains(_chunks[coord]))
-				{
-                    _mapChunkContainer.AddChild(_chunks[coord]);
-				}
-                _chunks[coord].Visible = true;
-                //Print(string.Format("Chunks exists, marking visible"));
-            }
-                      
+			LoadChunk(coord.x, coord.y);
 		}
-        
 
-		foreach (var coords in _chunks.Keys)
+		ClearFarChunks(chunksToLoad);
+
+
+	}
+
+	private void ClearFarChunks(List<Vector2i> visibleChunks)
+	{
+		foreach (AsyncChunk chunk in _chunks.Values)
 		{
-            if (!chunksToLoad.Contains(coords))
+			if (!visibleChunks.Contains(chunk.ChunkCoords))
 			{
-                
-				_chunks[coords].Visible = false;
-				if (_mapChunkContainer.GetChildren().Contains(_chunks[coords]))
-				{
-                    _mapChunkContainer.RemoveChild(_chunks[coords]);
-                    Print(string.Format("Removing Chunk"));
-				}
+                _chunks.TryRemove(chunk.ChunkCoords, out AsyncChunk chunkToRemove);
+				Print(string.Format("Removing chunk: {0}", chunk.ChunkCoords));
+                chunk.QueueFree();
 				
 			}
 		}
-		_isLoading = false;
-	}	
-
-	private void ShowLoadingScreen()
-	{
-		_loadScreen.Visible = true;
-		var tween = GetTree().CreateTween();
-		tween.TweenProperty(_loadScreen.GetNode<ColorRect>("ColorRect"), "modulate", new Color(Colors.White, 1), .5);
-		
-	}
-
-	private void HideLoadingScreen()
-	{
-        var tween = GetTree().CreateTween();
-        tween.TweenProperty(_loadScreen.GetNode<ColorRect>("ColorRect"), "modulate", new Color(Colors.White, 0), .5);
-        tween.TweenCallback(new Callable(this, nameof(HideCallback)));
-	}
-
-	private bool Between(float value, float start, float end)
-	{
-		if (start <= value && value < end) 
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	public void HideCallback()
-	{
-		_loadScreen.Visible = false;
 	}
 }
